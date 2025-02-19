@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # Runs when code is pushed to the main branch
+      - main  # Runs only when code is pushed to the main branch
 
 jobs:
   deploy:
@@ -14,22 +14,22 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up SSH
- 
-- name: Debug SSH Setup
-  run: |
-    mkdir -p ~/.ssh
-    printf "%s" "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-    chmod 600 ~/.ssh/id_rsa
-    ls -la ~/.ssh/
-    cat ~/.ssh/id_rsa | head -n 5
-    ssh-keyscan -H ${{ secrets.EC2_HOST }} || echo "Failed to scan keys"
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-
+      - name: Debug SSH Setup
+        run: |
+          ls -la ~/.ssh/
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo 'SSH Connection Successful'"
 
       - name: Deploy to EC2
         run: |
-          ssh ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            cd /path/to/EPAprep  # Update this path if needed
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /path/to/EPAprep  # Update with your project directory
             git pull origin main
-            sudo systemctl restart your-app-service  # Replace with your app service if applicable
+            sudo systemctl restart your-app-service  # Replace with your service name if needed
           EOF
+
